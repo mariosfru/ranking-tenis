@@ -39,14 +39,14 @@
       </section>
 
       <section id="ranking" class="section-card">
-        <div class="section-heading"><div><div class="eyebrow dark">CLASSIFICAÇÃO</div><h2>Ranking individual</h2></div><span class="header-note">Aproveitamento primeiro. Games decidem empates.</span></div>
+        <div class="section-heading"><div><div class="eyebrow dark">CLASSIFICAÇÃO</div><h2>Ranking individual</h2></div><span class="header-note">Vitórias primeiro. Saldo proporcional desempata.</span></div>
         <div class="segmented" role="group" aria-label="Modalidade do ranking">
           <button class="segment active" data-rank-mode="all" type="button">Geral</button>
           <button class="segment" data-rank-mode="singles" type="button">Simples</button>
           <button class="segment" data-rank-mode="doubles" type="button">Duplas</button>
         </div>
-        <div class="table-scroll"><table class="ranking-table"><thead><tr><th>POS.</th><th>JOGADOR</th><th>V–D</th><th>APROV.</th><th>SALDO</th></tr></thead><tbody id="ranking-body"></tbody></table></div>
-        <p class="footnote">Ordem: aproveitamento, saldo médio de games e total de vitórias. Sem jogos na modalidade, o jogador fica sem classificação.</p>
+        <div class="table-scroll"><table class="ranking-table"><thead><tr><th>POS.</th><th>JOGADOR</th><th>V–D</th><th>APROV.</th><th>SALDO %</th></tr></thead><tbody id="ranking-body"></tbody></table></div>
+        <p class="footnote">Ordem: aproveitamento, saldo proporcional médio e confronto direto, quando aplicável. Minisset e set convencional têm o mesmo peso. Com menos de 8 partidas, a classificação é provisória.</p>
       </section>
 
       <div class="lower-grid">
@@ -68,11 +68,17 @@
               <label><span>Jogador 1</span><select id="b1" required></select></label>
               <label class="doubles-only"><span>Jogador 2</span><select id="b2"></select></label>
             </div>
-            <div class="score-head">PLACAR FINAL <small>Primeiro a 3 games</small></div>
+            <label class="format-label" for="set_format"><span>Formato da partida</span>
+              <select id="set_format" required>
+                <option value="mini">Minisset · primeiro a 3 games</option>
+                <option value="standard">Set convencional · 6 games (tie-break em 6–6)</option>
+              </select>
+            </label>
+            <div class="score-head">PLACAR FINAL <small id="score-format-hint">Primeiro a 3 games</small></div>
             <div class="score-fields">
-              <label><span>Equipe A</span><select id="score_a" required><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+              <label><span>Equipe A</span><select id="score_a" required></select></label>
               <strong>×</strong>
-              <label><span>Equipe B</span><select id="score_b" required><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+              <label><span>Equipe B</span><select id="score_b" required></select></label>
             </div>
             <div class="two-fields">
               <label><span>Data do jogo</span><input id="played_on" type="date" required></label>

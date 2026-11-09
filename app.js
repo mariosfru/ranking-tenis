@@ -9,11 +9,11 @@ const SEED = {
     { id: 'p_thomaz', name: 'Thomaz' }
   ],
   matches: [
-    {id:'j_20261107_01',mode:'doubles',a1:'p_olavo',a2:'p_franco',b1:'p_diogo',b2:'p_thomaz',score_a:1,score_b:3,played_on:'2026-11-07',first_server:'p_olavo',recorded_by:'Registro inicial'},
-    {id:'j_20261107_02',mode:'doubles',a1:'p_olavo',a2:'p_diogo',b1:'p_thomaz',b2:'p_mario',score_a:3,score_b:0,played_on:'2026-11-07',first_server:'p_mario',recorded_by:'Registro inicial'},
-    {id:'j_20261107_03',mode:'doubles',a1:'p_franco',a2:'p_thomaz',b1:'p_diogo',b2:'p_mario',score_a:0,score_b:3,played_on:'2026-11-07',first_server:'p_franco',recorded_by:'Registro inicial'},
-    {id:'j_20261107_04',mode:'doubles',a1:'p_olavo',a2:'p_thomaz',b1:'p_franco',b2:'p_mario',score_a:2,score_b:3,played_on:'2026-11-07',first_server:'p_olavo',recorded_by:'Registro inicial'},
-    {id:'j_20261107_05',mode:'doubles',a1:'p_olavo',a2:'p_mario',b1:'p_franco',b2:'p_diogo',score_a:3,score_b:0,played_on:'2026-11-07',first_server:'p_diogo',recorded_by:'Registro inicial'}
+    {id:'j_20261107_01',set_format:'mini',mode:'doubles',a1:'p_olavo',a2:'p_franco',b1:'p_diogo',b2:'p_thomaz',score_a:1,score_b:3,played_on:'2026-11-07',first_server:'p_olavo',recorded_by:'Registro inicial'},
+    {id:'j_20261107_02',set_format:'mini',mode:'doubles',a1:'p_olavo',a2:'p_diogo',b1:'p_thomaz',b2:'p_mario',score_a:3,score_b:0,played_on:'2026-11-07',first_server:'p_mario',recorded_by:'Registro inicial'},
+    {id:'j_20261107_03',set_format:'mini',mode:'doubles',a1:'p_franco',a2:'p_thomaz',b1:'p_diogo',b2:'p_mario',score_a:0,score_b:3,played_on:'2026-11-07',first_server:'p_franco',recorded_by:'Registro inicial'},
+    {id:'j_20261107_04',set_format:'mini',mode:'doubles',a1:'p_olavo',a2:'p_thomaz',b1:'p_franco',b2:'p_mario',score_a:2,score_b:3,played_on:'2026-11-07',first_server:'p_olavo',recorded_by:'Registro inicial'},
+    {id:'j_20261107_05',set_format:'mini',mode:'doubles',a1:'p_olavo',a2:'p_mario',b1:'p_franco',b2:'p_diogo',score_a:3,score_b:0,played_on:'2026-11-07',first_server:'p_diogo',recorded_by:'Registro inicial'}
   ]
 };
 
@@ -69,34 +69,82 @@ function render() {
   renderRanking(); renderHistory(); renderPlayers(); fillPlayerSelects();
 }
 
+function matchFormat(m) { return m.set_format === 'standard' ? 'standard' : 'mini'; }
+function validScore(format, a, b) {
+  if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) return false;
+  if (format === 'mini') return (a === 3 && b <= 2) || (b === 3 && a <= 2);
+  if (format === 'standard') return (a === 6 && b <= 4) || (b === 6 && a <= 4) ||
+    (a === 7 && (b === 5 || b === 6)) || (b === 7 && (a === 5 || a === 6));
+  return false;
+}
+function headToHead(idA, idB, mode) {
+  let winsA=0,winsB=0;
+  for(const m of state.matches.filter(x=>mode==='all'||x.mode===mode)) {
+    const sideA = [m.a1,m.a2].includes(idA)?'a':[m.b1,m.b2].includes(idA)?'b':null;
+    const sideB = [m.a1,m.a2].includes(idB)?'a':[m.b1,m.b2].includes(idB)?'b':null;
+    if(!sideA||!sideB||sideA===sideB)continue;
+    const winner=m.score_a>m.score_b?'a':'b';
+    if(winner===sideA)winsA++;else winsB++;
+  }
+  if(!winsA&&!winsB) return 0;
+  return winsA/(winsA+winsB)-winsB/(winsA+winsB);
+}
 function computeRanking(mode) {
-  const stats = new Map(state.players.map(p => [p.id, { ...p, games:0, wins:0, losses:0, gf:0, ga:0 }]));
-  state.matches.filter(m => mode === 'all' || m.mode === mode).forEach(m => {
-    const aWon = m.score_a > m.score_b;
-    for (const side of ['a','b']) {
-      for (const id of [m[side+'1'],m[side+'2']].filter(Boolean)) {
-        const s = stats.get(id); if (!s) continue;
-        const won = (side === 'a') === aWon;
-        s.games++; s.wins += Number(won); s.losses += Number(!won);
-        s.gf += m[side === 'a' ? 'score_a' : 'score_b'];
-        s.ga += m[side === 'a' ? 'score_b' : 'score_a'];
+  const stats=new Map(state.players.map(p=>[p.id,{...p,games:0,wins:0,losses:0,gf:0,ga:0,proportionalSum:0}]));
+  state.matches.filter(m=>mode==='all'||m.mode===mode).forEach(m=>{
+    const aWon=m.score_a>m.score_b;
+    const total=m.score_a+m.score_b;
+    if(total<=0)return;
+    for(const side of ['a','b']) {
+      for(const id of [m[side+'1'],m[side+'2']].filter(Boolean)) {
+        const s=stats.get(id); if(!s)continue;
+        const won=(side==='a')===aWon;
+        const own=m[side==='a'?'score_a':'score_b'];
+        const opp=m[side==='a'?'score_b':'score_a'];
+        s.games++; s.wins+=Number(won); s.losses+=Number(!won);
+        s.gf+=own;s.ga+=opp;
+        s.proportionalSum+=(own-opp)/total;
       }
     }
   });
-  return [...stats.values()].map(s => ({...s, pct:s.games ? s.wins / s.games : -1, saldo:s.gf-s.ga, saldoMedio:s.games ? (s.gf-s.ga) / s.games : -Infinity}))
-    .sort((a,b) => b.pct-a.pct || b.saldoMedio-a.saldoMedio || b.wins-a.wins || a.name.localeCompare(b.name,'pt-BR'));
+  const ranked=[...stats.values()].map(s=>({...s,pct:s.games?s.wins/s.games:-1,
+    saldo:s.gf-s.ga, saldoMedio:s.games?s.proportionalSum/s.games:-Infinity,
+    provisional:s.games<8}));
+  const almostEqual=(a,b)=>Math.abs(a-b)<1e-10;
+  ranked.sort((a,b)=>b.pct-a.pct||b.saldoMedio-a.saldoMedio||a.name.localeCompare(b.name,'pt-BR'));
+  // Um confronto direto só desempata um grupo de EXATAMENTE dois jogadores com os dois primeiros critérios iguais.
+  // Grupos maiores permanecem empatados, evitando ordenações contraditórias entre três jogadores.
+  for(let i=0;i<ranked.length;) {
+    let j=i+1;
+    while(j<ranked.length && almostEqual(ranked[i].pct,ranked[j].pct) &&
+      almostEqual(ranked[i].saldoMedio,ranked[j].saldoMedio))j++;
+    if(j-i===2 && ranked[i].games && ranked[i+1].games && headToHead(ranked[i].id,ranked[i+1].id,mode)<0)
+      [ranked[i],ranked[i+1]]=[ranked[i+1],ranked[i]];
+    i=j;
+  }
+  let position=1;
+  ranked.forEach((s,i)=>{
+    if(i>0) {
+      const p=ranked[i-1];
+      if(!almostEqual(p.pct,s.pct)||!almostEqual(p.saldoMedio,s.saldoMedio)||
+        (p.games>0&&s.games>0&&headToHead(p.id,s.id,mode)!==0 &&
+          ranked.filter(x=>almostEqual(x.pct,s.pct)&&almostEqual(x.saldoMedio,s.saldoMedio)).length===2))position=i+1;
+    }
+    s.position=s.games?position:null;
+  });
+  return ranked;
 }
 function renderRanking() {
-  document.querySelectorAll('[data-rank-mode]').forEach(el => { el.classList.toggle('active', el.dataset.rankMode === rankMode); el.setAttribute('aria-pressed', String(el.dataset.rankMode === rankMode)); });
-  const stats = computeRanking(rankMode);
-  $('ranking-body').innerHTML = stats.map((s,i) => {
-    const sign = s.saldo > 0 ? '+' : '';
-    const noGames = !s.games;
-    return `<tr class="${i===0 && !noGames ? 'first':''}"><td><span class="position">${noGames ? '–' : i+1+'º'}</span></td>
-      <td class="who"><span class="ranking-player">${monogram(s.name)}<span>${escapeHtml(s.name)}<small>${s.games} ${s.games===1?'partida':'partidas'}</small></span></span></td>
-      <td>${s.wins}–${s.losses}</td><td class="pct">${noGames ? '–' : (s.pct*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'}</td>
-      <td class="${s.saldo>0?'positive':s.saldo<0?'negative':''}">${noGames?'–':sign+s.saldo}</td></tr>`;
-  }).join('') || '<tr><td colspan="5">Nenhum participante cadastrado.</td></tr>';
+  document.querySelectorAll('[data-rank-mode]').forEach(el=>{el.classList.toggle('active',el.dataset.rankMode===rankMode);el.setAttribute('aria-pressed',String(el.dataset.rankMode===rankMode));});
+  const stats=computeRanking(rankMode);
+  $('ranking-body').innerHTML=stats.map((s,i)=>{
+    const noGames=!s.games;
+    const saldoPct=noGames?'–':(s.saldoMedio*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+    return `<tr class="${i===0&&!noGames?'first':''}"><td><span class="position">${noGames?'–':s.position+'º'}</span></td>
+      <td class="who"><span class="ranking-player">${monogram(s.name)}<span>${escapeHtml(s.name)}<small>${s.games} ${s.games===1?'partida':'partidas'}${s.provisional&&s.games?' · provisório':''}</small></span></span></td>
+      <td>${s.wins}–${s.losses}</td><td class="pct">${noGames?'–':(s.pct*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'}</td>
+      <td class="${s.saldoMedio>0?'positive':s.saldoMedio<0?'negative':''}">${saldoPct}</td></tr>`;
+  }).join('')||'<tr><td colspan="5">Nenhum participante cadastrado.</td></tr>';
 }
 
 function renderHistory() {
@@ -106,7 +154,7 @@ function renderHistory() {
   const shown = matches.slice(0,historyLimit);
   $('history-list').innerHTML = shown.length ? shown.map(m => {
     const aWon = m.score_a > m.score_b;
-    return `<article class="history-item"><div class="history-top"><span class="mode-tag">${m.mode === 'singles'?'Simples':'Duplas'}</span><span class="history-date">${fmtDate(m.played_on)}</span></div>
+    return `<article class="history-item"><div class="history-top"><span class="mode-tag">${m.mode === 'singles'?'Simples':'Duplas'}</span><span class="format-tag">${matchFormat(m)==='standard'?'Set convencional':'Minisset'}</span><span class="history-date">${fmtDate(m.played_on)}</span></div>
       <div class="history-score"><span class="team ${aWon?'':'loser'}">${escapeHtml(teamName(m,'a'))}</span><span class="numbers">${m.score_a} × ${m.score_b}</span><span class="team right ${aWon?'loser':''}">${escapeHtml(teamName(m,'b'))}</span></div>
       <div class="history-meta"><span>${m.recorded_by ? 'Por '+escapeHtml(m.recorded_by) : (m.first_server ? '1º saque: '+escapeHtml(nameFor(m.first_server)) : '')}</span><span class="edit-actions"><button type="button" data-edit="${escapeHtml(m.id)}">Editar</button><button type="button" data-delete="${escapeHtml(m.id)}">Excluir</button></span></div>
     </article>`;
@@ -143,14 +191,24 @@ function setFormMode(mode) {
   $('suggestion-box').hidden = true;
   updateServerOptions();
 }
+function setScoreOptions(format, preserve=false) {
+  const options=['<option value="">–</option>'];
+  for(let i=0;i<=(format==='standard'?7:3);i++) options.push(`<option value="${i}">${i}</option>`);
+  for(const id of ['score_a','score_b']) {
+    const el=$(id), previous=el.value;
+    el.innerHTML=options.join('');
+    if(preserve && previous!=='' && Number(previous)<=(format==='standard'?7:3)) el.value=previous;
+  }
+  $('score-format-hint').textContent=format==='standard'?'6 games, ou 7–5 / 7–6':'Primeiro a 3 games';
+}
 function clearForm() {
   editId = null; $('match-form').reset(); $('played_on').value=localToday();
   $('save-match').textContent='Salvar resultado'; $('cancel-edit').hidden=true;
-  $('suggestion-box').hidden=true; setFormMode(formMode); updateServerOptions();
+  $('suggestion-box').hidden=true; setFormMode(formMode);setScoreOptions('mini'); updateServerOptions();
 }
 function getFormData() {
   const d = {
-    mode:formMode, a1:$('a1').value, a2:formMode==='doubles'?$('a2').value:null,
+    mode:formMode, set_format:$('set_format').value, a1:$('a1').value, a2:formMode==='doubles'?$('a2').value:null,
     b1:$('b1').value, b2:formMode==='doubles'?$('b2').value:null,
     score_a:$('score_a').value === ''?NaN:Number($('score_a').value),
     score_b:$('score_b').value === ''?NaN:Number($('score_b').value),
@@ -159,12 +217,13 @@ function getFormData() {
   };
   const ids=[d.a1,d.b1,...(d.mode==='doubles'?[d.a2,d.b2]:[])];
   if (ids.some(x=>!x)||new Set(ids).size!==ids.length) throw new Error('Selecione jogadores diferentes para cada posição.');
-  if (!((d.score_a === 3 && d.score_b>=0 && d.score_b<=2)||(d.score_b===3 && d.score_a>=0 && d.score_a<=2))) throw new Error('O placar precisa ser 3 a 0, 3 a 1 ou 3 a 2.');
+  if (!validScore(d.set_format,d.score_a,d.score_b)) throw new Error(d.set_format==='standard'?'Placar inválido: use 6–0 a 6–4, 7–5 ou 7–6.':'Placar inválido: use 3–0, 3–1 ou 3–2.');
   if (!d.played_on) throw new Error('Informe a data da partida.');
   return d;
 }
 function verifyDemo(body) {
   if (body.mode !== 'singles' && body.mode !== 'doubles') throw new Error('Modalidade inválida.');
+  if (!validScore(body.set_format,body.score_a,body.score_b)) throw new Error('Placar inválido para o formato escolhido.');
   const ids=[body.a1,body.b1,...(body.mode==='doubles'?[body.a2,body.b2]:[])];
   if (ids.some(x=>!state.players.find(p=>p.id===x))||new Set(ids).size!==ids.length) throw new Error('Jogadores inválidos.');
 }
@@ -182,7 +241,7 @@ async function storeMatch(body) {
 }
 function selectMatch(id) {
   const m=state.matches.find(x=>x.id===id);if(!m)return;
-  clearForm();setFormMode(m.mode);
+  clearForm();setFormMode(m.mode);$('set_format').value=matchFormat(m);setScoreOptions(matchFormat(m));
   for(const key of ['a1','a2','b1','b2']) if(m[key]) $(key).value=m[key];
   $('score_a').value=m.score_a; $('score_b').value=m.score_b;
   $('played_on').value=m.played_on; $('recorded_by').value=m.recorded_by || '';
@@ -242,6 +301,7 @@ for(const button of document.querySelectorAll('[data-rank-mode]')) button.addEve
 for(const button of document.querySelectorAll('[data-history-mode]')) button.addEventListener('click',()=>{historyMode=button.dataset.historyMode;historyLimit=12;renderHistory();});
 for(const button of document.querySelectorAll('[data-form-mode]')) button.addEventListener('click',()=>{setFormMode(button.dataset.formMode);$('a2').value='';$('b2').value='';updateServerOptions();});
 for(const id of ['a1','a2','b1','b2']) $(id).addEventListener('change',updateServerOptions);
+$('set_format').addEventListener('change',()=>setScoreOptions($('set_format').value,true));
 $('match-form').addEventListener('submit',async(e)=>{
   e.preventDefault();const btn=$('save-match');btn.disabled=true;
   try {await storeMatch(getFormData());} catch(err){showToast(err.message||'Erro ao salvar.',true);}finally{btn.disabled=false;}
@@ -276,7 +336,7 @@ async function start(){
   const badge=$('connection-pill');
   badge.textContent=isDemo?'Demonstração local':'Conectando';badge.className='connection-pill '+(isDemo?'demo':'');
   $('edit-code-hint').textContent=isDemo?'Demonstração: a chave não é exigida. Os dados só ficam neste navegador.':'A chave fica apenas nesta aba; nunca é enviada na URL nem salva no navegador.';
-  $('played_on').value=localToday();setFormMode('doubles');
+  $('played_on').value=localToday();setFormMode('doubles');setScoreOptions('mini');
   try {
     await refresh();
     if(!isDemo){badge.textContent='Sincronizado';badge.className='connection-pill live';}
