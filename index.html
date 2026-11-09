@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111b16">
+  <meta name="description" content="Ranking individual de tênis entre amigos: simples, duplas e histórico de jogos.">
+  <title>Ranking do Tênis</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="#inicio" aria-label="Início do ranking">
+        <span class="brand-ball" aria-hidden="true"></span><span>RANKING <small>DO TÊNIS</small></span>
+      </a>
+      <span id="connection-pill" class="connection-pill">Carregando…</span>
+    </header>
+
+    <main id="inicio">
+      <section class="hero" aria-label="Visão geral">
+        <div class="hero-copy">
+          <div class="eyebrow">A QUADRA É DE TODOS</div>
+          <h1>O jogo acaba.<br><em>O ranking fica.</em></h1>
+          <p>Simples ou duplas, cada partida conta. Acompanhe os resultados e a classificação individual do grupo.</p>
+          <div class="hero-actions">
+            <a class="btn btn-lime" href="#registro">Registrar jogo <span aria-hidden="true">↗</span></a>
+            <a class="btn btn-outline" href="#historico">Ver histórico</a>
+          </div>
+        </div>
+        <div class="hero-court" aria-hidden="true"><div class="court-line vertical"></div><div class="court-line horizontal"></div><div class="court-line service-left"></div><div class="court-line service-right"></div><div class="hero-tennis-ball"></div></div>
+      </section>
+
+      <section class="metrics" aria-label="Números do grupo">
+        <div class="metric"><span>JOGOS REGISTRADOS</span><strong id="count-matches">5</strong></div>
+        <div class="metric"><span>PARTICIPANTES</span><strong id="count-players">5</strong></div>
+        <div class="metric"><span>SIMPLES</span><strong id="count-singles">0</strong></div>
+        <div class="metric"><span>DUPLAS</span><strong id="count-doubles">5</strong></div>
+      </section>
+
+      <section id="ranking" class="section-card">
+        <div class="section-heading"><div><div class="eyebrow dark">CLASSIFICAÇÃO</div><h2>Ranking individual</h2></div><span class="header-note">Aproveitamento primeiro. Games decidem empates.</span></div>
+        <div class="segmented" role="group" aria-label="Modalidade do ranking">
+          <button class="segment active" data-rank-mode="all" type="button">Geral</button>
+          <button class="segment" data-rank-mode="singles" type="button">Simples</button>
+          <button class="segment" data-rank-mode="doubles" type="button">Duplas</button>
+        </div>
+        <div class="table-scroll"><table class="ranking-table"><thead><tr><th>POS.</th><th>JOGADOR</th><th>V–D</th><th>APROV.</th><th>SALDO</th></tr></thead><tbody id="ranking-body"></tbody></table></div>
+        <p class="footnote">Ordem: aproveitamento, saldo médio de games e total de vitórias. Sem jogos na modalidade, o jogador fica sem classificação.</p>
+      </section>
+
+      <div class="lower-grid">
+        <section id="registro" class="section-card form-card">
+          <div class="section-heading"><div><div class="eyebrow dark">ANOTE O PLACAR</div><h2>Registrar partida</h2></div></div>
+          <div class="segmented form-mode" role="group" aria-label="Tipo de partida">
+            <button class="segment" data-form-mode="singles" type="button">1 × 1 · Simples</button>
+            <button class="segment active" data-form-mode="doubles" type="button">2 × 2 · Duplas</button>
+          </div>
+          <form id="match-form" autocomplete="off">
+            <div class="team-head"><span>EQUIPE A</span><span id="team-a-label">Dupla 1</span></div>
+            <div class="team-selects">
+              <label><span>Jogador 1</span><select id="a1" required></select></label>
+              <label class="doubles-only"><span>Jogador 2</span><select id="a2"></select></label>
+            </div>
+            <div class="versus">CONTRA</div>
+            <div class="team-head"><span>EQUIPE B</span><span id="team-b-label">Dupla 2</span></div>
+            <div class="team-selects">
+              <label><span>Jogador 1</span><select id="b1" required></select></label>
+              <label class="doubles-only"><span>Jogador 2</span><select id="b2"></select></label>
+            </div>
+            <div class="score-head">PLACAR FINAL <small>Primeiro a 3 games</small></div>
+            <div class="score-fields">
+              <label><span>Equipe A</span><select id="score_a" required><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+              <strong>×</strong>
+              <label><span>Equipe B</span><select id="score_b" required><option value="">–</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+            </div>
+            <div class="two-fields">
+              <label><span>Data do jogo</span><input id="played_on" type="date" required></label>
+              <label><span>Quem começou sacando? <i>Opcional</i></span><select id="first_server"></select></label>
+            </div>
+            <label class="block-label"><span>Registrado por <i>Opcional</i></span><input id="recorded_by" maxlength="40" placeholder="Seu nome"></label>
+            <div id="suggestion-box" class="suggestion-box" hidden></div>
+            <div class="form-actions">
+              <button class="btn btn-muted" id="suggest-btn" type="button">Sugerir duplas</button>
+              <button class="btn btn-primary" id="save-match" type="submit">Salvar resultado</button>
+            </div>
+            <button class="text-button" id="cancel-edit" type="button" hidden>Cancelar edição</button>
+          </form>
+        </section>
+
+        <div class="sidebar-stack">
+          <section id="historico" class="section-card">
+            <div class="section-heading"><div><div class="eyebrow dark">ÚLTIMOS JOGOS</div><h2>Histórico</h2></div></div>
+            <div class="segmented small" role="group" aria-label="Modalidade do histórico">
+              <button class="segment active" data-history-mode="all" type="button">Todos</button>
+              <button class="segment" data-history-mode="singles" type="button">Simples</button>
+              <button class="segment" data-history-mode="doubles" type="button">Duplas</button>
+            </div>
+            <div id="history-list" class="history-list"></div>
+            <p id="history-count" class="footnote"></p>
+          </section>
+
+          <section class="section-card players-card">
+            <div class="section-heading"><div><div class="eyebrow dark">O GRUPO</div><h2>Participantes</h2></div></div>
+            <div id="player-chips" class="player-chips"></div>
+            <p class="footnote">Cada jogador é identificado pelas iniciais do nome. Não há fotos ou uploads.</p>
+            <form id="player-form" class="player-add"><label for="new-player">Adicionar jogador</label><div class="inline-input"><input type="text" id="new-player" placeholder="Nome do participante" maxlength="40" required minlength="2"><button type="submit" class="btn btn-primary">Adicionar</button></div></form>
+          </section>
+        </div>
+      </div>
+
+      <section class="security-panel">
+        <div><div class="eyebrow">ACESSO AO GRUPO</div><h2>Uma chave, sem cadastro.</h2><p>Para registrar, editar ou excluir resultados, informe a chave compartilhada do grupo. Ela é conferida no servidor e não aparece no repositório público.</p></div>
+        <label><span>Chave de edição</span><input id="edit-code" type="password" minlength="12" placeholder="Chave compartilhada" autocomplete="off"><small id="edit-code-hint">A chave fica apenas nesta aba, até ela ser fechada ou recarregada.</small></label>
+      </section>
+    </main>
+    <footer>RANKING DO TÊNIS <span>Feito para jogar mais, contar melhor.</span></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="config.js"></script><script type="module" src="app.js"></script>
+</body>
+</html>

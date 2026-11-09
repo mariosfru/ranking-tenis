@@ -1,0 +1,29 @@
+RANKING DO TENIS - SITE PRONTO PARA GITHUB PAGES
+
+A API ja esta configurada:
+https://ranking-tenis-api.mariosfru.workers.dev
+
+COMO PUBLICAR (sem terminal):
+1. Descompacte este ZIP no computador.
+2. Entre em https://github.com/mariosfru/ranking-tenis
+3. Se o repositorio estiver vazio, clique em "uploading an existing file".
+   Caso contrario, use Add file > Upload files.
+4. Arraste estes cinco arquivos da pasta diretamente para o GitHub:
+   index.html, app.js, styles.css, config.js e .nojekyll.
+   LEIA-ME-PRIMEIRO.txt nao e necessario enviar.
+5. Confirme em "Commit changes" (branch main).
+6. Em Settings > Pages, selecione Deploy from a branch; branch main; pasta /(root); clique Save.
+7. Abra https://mariosfru.github.io/ranking-tenis/
+8. O selo deve indicar "Sincronizado"; os cinco jogadores e cinco partidas devem aparecer.
+
+SE O SITE NAO CARREGAR:
+- confirme os cinco arquivos na RAIZ do repositorio, nao numa subpasta;
+- confira se a API funciona em
+  https://ranking-tenis-api.mariosfru.workers.dev/api/state
+- se houver erro de "Origem nao permitida", confira PUBLIC_ORIGIN = https://mariosfru.github.io nas Variables do Worker.
+
+PARA SALVAR E EDITAR RESULTADOS:
+Configure no Cloudflare Worker a variavel secreta ADMIN_CODE, com ao menos 12 caracteres.
+Nao inclua esse codigo em arquivos publicados e nao o compartilhe aqui.
+
+O SITE E PUBLICO; apenas a gravacao de resultados usa a chave.
