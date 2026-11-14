@@ -85,61 +85,89 @@ function headToHead(idA, idB, mode) {
   return winsA/(winsA+winsB)-winsB/(winsA+winsB);
 }
 function computeRanking(mode) {
-  const stats=new Map(state.players.map(p=>[p.id,{...p,games:0,wins:0,losses:0,gf:0,ga:0,proportionalSum:0}]));
-  state.matches.filter(m=>mode==='all'||m.mode===mode).forEach(m=>{
-    const aWon=m.score_a>m.score_b;
-    const total=m.score_a+m.score_b;
-    if(total<=0)return;
-    for(const side of ['a','b']) {
-      for(const id of [m[side+'1'],m[side+'2']].filter(Boolean)) {
-        const s=stats.get(id); if(!s)continue;
-        const won=(side==='a')===aWon;
-        const own=m[side==='a'?'score_a':'score_b'];
-        const opp=m[side==='a'?'score_b':'score_a'];
-        s.games++; s.wins+=Number(won); s.losses+=Number(!won);
-        s.gf+=own;s.ga+=opp;
-        s.proportionalSum+=(own-opp)/total;
+  const performance = mode === 'performance';
+  const matchMode = performance ? 'all' : mode;
+  const stats = new Map(state.players.map(p => [p.id, {
+    ...p, games:0, wins:0, losses:0, proportionalSum:0
+  }]));
+  state.matches.filter(m => matchMode === 'all' || m.mode === matchMode).forEach(m => {
+    const aWon = m.score_a > m.score_b;
+    const total = m.score_a + m.score_b;
+    if (total <= 0) return;
+    for (const side of ['a','b']) {
+      for (const id of [m[side+'1'],m[side+'2']].filter(Boolean)) {
+        const s = stats.get(id);
+        if (!s) continue;
+        const won = (side === 'a') === aWon;
+        const own = m[side === 'a' ? 'score_a' : 'score_b'];
+        const opp = m[side === 'a' ? 'score_b' : 'score_a'];
+        s.games++;
+        s.wins += Number(won);
+        s.losses += Number(!won);
+        s.proportionalSum += (own - opp) / total;
       }
     }
   });
-  const ranked=[...stats.values()].map(s=>({...s,pct:s.games?s.wins/s.games:-1,
-    saldo:s.gf-s.ga, saldoMedio:s.games?s.proportionalSum/s.games:-Infinity,
-    provisional:s.games<8}));
-  const almostEqual=(a,b)=>Math.abs(a-b)<1e-10;
-  ranked.sort((a,b)=>b.pct-a.pct||b.saldoMedio-a.saldoMedio||a.name.localeCompare(b.name,'pt-BR'));
-  // Um confronto direto só desempata um grupo de EXATAMENTE dois jogadores com os dois primeiros critérios iguais.
-  // Grupos maiores permanecem empatados, evitando ordenações contraditórias entre três jogadores.
-  for(let i=0;i<ranked.length;) {
+  const ranked = [...stats.values()].map(s => ({
+    ...s,
+    pct: s.games ? s.wins/s.games : -1,
+    saldoMedio: s.games ? s.proportionalSum/s.games : -Infinity,
+    adjusted: s.games ? (s.wins+2)/(s.games+4) : -1
+  }));
+  const equals = (a,b) => a === b || Math.abs(a-b) < 1e-10;
+  const compareNumbers = (a,b) => {
+    if (performance) {
+      return (b.adjusted-a.adjusted) || (b.saldoMedio-a.saldoMedio) ||
+        (b.wins-a.wins) || (b.pct-a.pct) || 0;
+    }
+    return (b.wins-a.wins) || (b.pct-a.pct) || (b.saldoMedio-a.saldoMedio) || 0;
+  };
+  const tied = (a,b) => performance
+    ? equals(a.adjusted,b.adjusted) && equals(a.saldoMedio,b.saldoMedio) &&
+      a.wins===b.wins && equals(a.pct,b.pct)
+    : a.wins===b.wins && equals(a.pct,b.pct) && equals(a.saldoMedio,b.saldoMedio);
+  ranked.sort((a,b) => compareNumbers(a,b) || a.name.localeCompare(b.name,'pt-BR'));
+  // Confronto direto somente em empate exato entre dois participantes.
+  for (let i=0; i<ranked.length;) {
     let j=i+1;
-    while(j<ranked.length && almostEqual(ranked[i].pct,ranked[j].pct) &&
-      almostEqual(ranked[i].saldoMedio,ranked[j].saldoMedio))j++;
-    if(j-i===2 && ranked[i].games && ranked[i+1].games && headToHead(ranked[i].id,ranked[i+1].id,mode)<0)
-      [ranked[i],ranked[i+1]]=[ranked[i+1],ranked[i]];
+    while(j<ranked.length && tied(ranked[i],ranked[j])) j++;
+    if(j-i===2 && ranked[i].games && ranked[i+1].games &&
+      headToHead(ranked[i].id,ranked[i+1].id,matchMode)<0) {
+      [ranked[i],ranked[i+1]] = [ranked[i+1],ranked[i]];
+    }
+    for (let k=i;k<j;k++) {
+      const tieBroken = j-i===2 && ranked[i].games && ranked[i+1].games &&
+        headToHead(ranked[i].id,ranked[i+1].id,matchMode)!==0;
+      ranked[k].position = !ranked[k].games ? null : tieBroken ? k+1 : i+1;
+    }
     i=j;
   }
-  let position=1;
-  ranked.forEach((s,i)=>{
-    if(i>0) {
-      const p=ranked[i-1];
-      if(!almostEqual(p.pct,s.pct)||!almostEqual(p.saldoMedio,s.saldoMedio)||
-        (p.games>0&&s.games>0&&headToHead(p.id,s.id,mode)!==0 &&
-          ranked.filter(x=>almostEqual(x.pct,s.pct)&&almostEqual(x.saldoMedio,s.saldoMedio)).length===2))position=i+1;
-    }
-    s.position=s.games?position:null;
-  });
   return ranked;
 }
 function renderRanking() {
-  document.querySelectorAll('[data-rank-mode]').forEach(el=>{el.classList.toggle('active',el.dataset.rankMode===rankMode);el.setAttribute('aria-pressed',String(el.dataset.rankMode===rankMode));});
-  const stats=computeRanking(rankMode);
-  $('ranking-body').innerHTML=stats.map((s,i)=>{
-    const noGames=!s.games;
-    const saldoPct=noGames?'–':(s.saldoMedio*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+  const performance = rankMode === 'performance';
+  document.querySelectorAll('[data-rank-mode]').forEach(el => {
+    el.classList.toggle('active',el.dataset.rankMode===rankMode);
+    el.setAttribute('aria-pressed',String(el.dataset.rankMode===rankMode));
+  });
+  $('ranking-headline').textContent = performance
+    ? 'Constância conta mais do que um começo perfeito.'
+    : 'Mais vitórias no topo. Aproveitamento desempata.';
+  $('ranking-final-header').textContent = performance ? 'ÍNDICE' : 'SALDO %';
+  $('ranking-explanation').textContent = performance
+    ? 'Índice de Performance = (vitórias + 2) ÷ (partidas + 4). Corrige a vantagem de poucos jogos. Desempate pelo saldo proporcional médio. Simples, duplas e formatos de set têm o mesmo peso.'
+    : 'Ordem: mais vitórias, maior aproveitamento, saldo proporcional médio e, em empate exato entre dois jogadores, confronto direto. Minisset e set convencional valem igualmente.';
+  const stats = computeRanking(rankMode);
+  $('ranking-body').innerHTML = stats.map((s,i) => {
+    const noGames = !s.games;
+    const finalStat = noGames ? '–' : ((performance?s.adjusted:s.saldoMedio)*100)
+      .toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
+    const finalClass = performance ? 'pct' : s.saldoMedio>0?'positive':s.saldoMedio<0?'negative':'';
     return `<tr class="${i===0&&!noGames?'first':''}"><td><span class="position">${noGames?'–':s.position+'º'}</span></td>
-      <td class="who"><span class="ranking-player">${monogram(s.name)}<span>${escapeHtml(s.name)}<small>${s.games} ${s.games===1?'partida':'partidas'}${s.provisional&&s.games?' · provisório':''}</small></span></span></td>
+      <td class="who"><span class="ranking-player">${monogram(s.name)}<span>${escapeHtml(s.name)}<small>${s.games} ${s.games===1?'partida':'partidas'}</small></span></span></td>
       <td>${s.wins}–${s.losses}</td><td class="pct">${noGames?'–':(s.pct*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'}</td>
-      <td class="${s.saldoMedio>0?'positive':s.saldoMedio<0?'negative':''}">${saldoPct}</td></tr>`;
-  }).join('')||'<tr><td colspan="5">Nenhum participante cadastrado.</td></tr>';
+      <td class="${finalClass}">${finalStat}</td></tr>`;
+  }).join('') || '<tr><td colspan="5">Nenhum participante cadastrado.</td></tr>';
 }
 
 function renderHistory() {

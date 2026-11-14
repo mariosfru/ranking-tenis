@@ -39,14 +39,15 @@
       </section>
 
       <section id="ranking" class="section-card">
-        <div class="section-heading"><div><div class="eyebrow dark">CLASSIFICAÇÃO</div><h2>Ranking individual</h2></div><span class="header-note">Vitórias primeiro. Saldo proporcional desempata.</span></div>
+        <div class="section-heading"><div><div class="eyebrow dark">CLASSIFICAÇÃO</div><h2>Ranking individual</h2></div><span class="header-note" id="ranking-headline">Mais vitórias no topo. Aproveitamento desempata.</span></div>
         <div class="segmented" role="group" aria-label="Modalidade do ranking">
           <button class="segment active" data-rank-mode="all" type="button">Geral</button>
           <button class="segment" data-rank-mode="singles" type="button">Simples</button>
           <button class="segment" data-rank-mode="doubles" type="button">Duplas</button>
+          <button class="segment" data-rank-mode="performance" type="button">Performance</button>
         </div>
-        <div class="table-scroll"><table class="ranking-table"><thead><tr><th>POS.</th><th>JOGADOR</th><th>V–D</th><th>APROV.</th><th>SALDO %</th></tr></thead><tbody id="ranking-body"></tbody></table></div>
-        <p class="footnote">Ordem: aproveitamento, saldo proporcional médio e confronto direto, quando aplicável. Minisset e set convencional têm o mesmo peso. Com menos de 8 partidas, a classificação é provisória.</p>
+        <div class="table-scroll"><table class="ranking-table"><thead><tr><th>POS.</th><th>JOGADOR</th><th>V–D</th><th>APROV.</th><th id="ranking-final-header">SALDO %</th></tr></thead><tbody id="ranking-body"></tbody></table></div>
+        <p id="ranking-explanation" class="footnote">Ordem: mais vitórias, maior aproveitamento, saldo proporcional médio e, em empate exato entre dois jogadores, confronto direto. Minisset e set convencional valem igualmente.</p>
       </section>
 
       <div class="lower-grid">

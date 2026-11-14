@@ -1,0 +1,15 @@
+RANKING DO TÊNIS — 4 ABAS
+
+MUDANÇAS
+- Geral, Simples, Duplas: mais vitórias, depois aproveitamento, depois saldo proporcional médio.
+- Performance: índice ajustado = (vitórias + 2) / (partidas + 4), depois saldo proporcional médio.
+- Nenhuma mudança no D1 ou no Worker: todos os jogos e cadastros são preservados.
+- Não é exigida senha; a versão mantém o acesso livre.
+
+INSTALAÇÃO
+1. Abra https://github.com/mariosfru/ranking-tenis
+2. Substitua os arquivos index.html, app.js e styles.css na RAIZ do repositório.
+3. Confirme em Commit changes, aguarde publicação em Actions.
+4. Abra https://mariosfru.github.io/ranking-tenis/ e recarregue.
+
+OBS: os arquivos config.js e os do Cloudflare não devem ser modificados.

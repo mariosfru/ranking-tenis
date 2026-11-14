@@ -21,3 +21,7 @@
 
 /* Indicação discreta de acesso sem senha. */
 .free-edit-note{margin:-2px 0 15px;color:#708074;font-size:12px;line-height:1.45}
+
+/* Quatro abas: quebrar em duas linhas em telas estreitas, sem esconder Performance. */
+#ranking .segmented{display:flex;flex-wrap:wrap;width:100%}
+#ranking .segmented .segment{flex:1 1 90px}
