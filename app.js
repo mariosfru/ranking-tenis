@@ -47,11 +47,6 @@ function saveDemo() { localStorage.setItem(cacheKey, JSON.stringify(state)); }
 
 async function callApi(path, method='GET', body=undefined) {
   const headers = { 'Content-Type':'application/json' };
-  if (method !== 'GET') {
-    const code = $('edit-code').value;
-    if (code.length < 12) throw new Error('Informe a chave de edição de pelo menos 12 caracteres.');
-    headers['X-Edit-Code'] = code;
-  }
   const response = await fetch(`${apiBase}${path}`, { method, headers, ...(body === undefined ? {} : {body:JSON.stringify(body)}), cache:'no-store' });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || `Erro ${response.status}`);
@@ -335,7 +330,6 @@ $('suggest-btn').addEventListener('click',()=>{
 async function start(){
   const badge=$('connection-pill');
   badge.textContent=isDemo?'Demonstração local':'Conectando';badge.className='connection-pill '+(isDemo?'demo':'');
-  $('edit-code-hint').textContent=isDemo?'Demonstração: a chave não é exigida. Os dados só ficam neste navegador.':'A chave fica apenas nesta aba; nunca é enviada na URL nem salva no navegador.';
   $('played_on').value=localToday();setFormMode('doubles');setScoreOptions('mini');
   try {
     await refresh();

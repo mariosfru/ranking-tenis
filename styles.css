@@ -17,3 +17,7 @@
 .player-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 10px 5px 5px}
 
 .format-label{display:flex;flex-direction:column;gap:7px;margin:22px 0 0}.format-label span{font-size:11px;font-weight:800;color:#687a6f}.format-label select{width:100%;min-height:43px;border:1px solid #dfe6db;border-radius:9px;background:#fcfdf9;color:var(--ink);padding:10px;font-weight:650;outline:none}.format-label select:focus{border-color:#94b55e}.format-tag{margin-left:6px;font-size:10px;font-weight:650;color:#6c8071}.provisional-note{font-size:10px;color:#718175;font-weight:500}
+
+
+/* Indicação discreta de acesso sem senha. */
+.free-edit-note{margin:-2px 0 15px;color:#708074;font-size:12px;line-height:1.45}
