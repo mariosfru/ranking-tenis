@@ -64,7 +64,33 @@ function render() {
   renderRanking(); renderHistory(); renderPlayers(); fillPlayerSelects();
 }
 
-function matchFormat(m) { return m.set_format === 'standard' ? 'standard' : 'mini'; }
+function matchFormat(m) { return ['mini','standard','best3'].includes(m.set_format) ? m.set_format : 'mini'; }
+function readSets(m) {
+  try {
+    const value = typeof m.set_scores === 'string' ? JSON.parse(m.set_scores) : m.set_scores;
+    return Array.isArray(value) ? value : [];
+  } catch { return []; }
+}
+function matchMargin(m) {
+  if (matchFormat(m) !== 'best3') {
+    const total = m.score_a + m.score_b;
+    return total > 0 ? (m.score_a - m.score_b) / total : 0;
+  }
+  const sets = readSets(m);
+  const sumA = sets.reduce((acc,s)=>acc+Number(s.a||0),0);
+  const sumB = sets.reduce((acc,s)=>acc+Number(s.b||0),0);
+  return sumA + sumB > 0 ? (sumA - sumB)/(sumA + sumB) : 0;
+}
+function validBest3(sets) {
+  if (!Array.isArray(sets) || ![2,3].includes(sets.length)) return false;
+  let wa=0,wb=0;
+  for (let i=0;i<sets.length;i++) {
+    const s=sets[i];
+    if (!s || !validScore('standard',s.a,s.b) || wa===2 || wb===2) return false;
+    if (s.a>s.b) wa++; else wb++;
+  }
+  return (wa===2 || wb===2) && (sets.length === 2 ? Math.max(wa,wb)===2 : wa===2 && wb===1 || wb===2 && wa===1);
+}
 function validScore(format, a, b) {
   if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0) return false;
   if (format === 'mini') return (a === 3 && b <= 2) || (b === 3 && a <= 2);
@@ -92,19 +118,16 @@ function computeRanking(mode) {
   }]));
   state.matches.filter(m => matchMode === 'all' || m.mode === matchMode).forEach(m => {
     const aWon = m.score_a > m.score_b;
-    const total = m.score_a + m.score_b;
-    if (total <= 0) return;
+    const margin = matchMargin(m);
     for (const side of ['a','b']) {
       for (const id of [m[side+'1'],m[side+'2']].filter(Boolean)) {
         const s = stats.get(id);
         if (!s) continue;
         const won = (side === 'a') === aWon;
-        const own = m[side === 'a' ? 'score_a' : 'score_b'];
-        const opp = m[side === 'a' ? 'score_b' : 'score_a'];
         s.games++;
         s.wins += Number(won);
         s.losses += Number(!won);
-        s.proportionalSum += (own - opp) / total;
+        s.proportionalSum += (side === 'a' ? margin : -margin);
       }
     }
   });
@@ -155,8 +178,8 @@ function renderRanking() {
     : 'Mais vitórias no topo. Aproveitamento desempata.';
   $('ranking-final-header').textContent = performance ? 'ÍNDICE' : 'SALDO %';
   $('ranking-explanation').textContent = performance
-    ? 'Índice de Performance = (vitórias + 2) ÷ (partidas + 4). Corrige a vantagem de poucos jogos. Desempate pelo saldo proporcional médio. Simples, duplas e formatos de set têm o mesmo peso.'
-    : 'Ordem: mais vitórias, maior aproveitamento, saldo proporcional médio e, em empate exato entre dois jogadores, confronto direto. Minisset e set convencional valem igualmente.';
+    ? 'Índice de Performance = (vitórias + 2) ÷ (partidas + 4). Desempate pelo saldo proporcional médio. Cada partida vale uma vitória, seja minisset, set ou melhor de três.'
+    : 'Ordem: mais vitórias, maior aproveitamento, saldo proporcional médio e confronto direto. Todos os formatos contam como uma partida.';
   const stats = computeRanking(rankMode);
   $('ranking-body').innerHTML = stats.map((s,i) => {
     const noGames = !s.games;
@@ -177,8 +200,11 @@ function renderHistory() {
   const shown = matches.slice(0,historyLimit);
   $('history-list').innerHTML = shown.length ? shown.map(m => {
     const aWon = m.score_a > m.score_b;
-    return `<article class="history-item"><div class="history-top"><span class="mode-tag">${m.mode === 'singles'?'Simples':'Duplas'}</span><span class="format-tag">${matchFormat(m)==='standard'?'Set convencional':'Minisset'}</span><span class="history-date">${fmtDate(m.played_on)}</span></div>
-      <div class="history-score"><span class="team ${aWon?'':'loser'}">${escapeHtml(teamName(m,'a'))}</span><span class="numbers">${m.score_a} × ${m.score_b}</span><span class="team right ${aWon?'loser':''}">${escapeHtml(teamName(m,'b'))}</span></div>
+    const isBest3 = matchFormat(m)==='best3';
+    const label = isBest3?'Melhor de 3':matchFormat(m)==='standard'?'Set convencional':'Minisset';
+    const setSummary = isBest3 ? readSets(m).map(s=>`${s.a}–${s.b}`).join(' / ') : '';
+    return `<article class="history-item"><div class="history-top"><span class="mode-tag">${m.mode === 'singles'?'Simples':'Duplas'}</span><span class="format-tag">${label}</span><span class="history-date">${fmtDate(m.played_on)}</span></div>
+      <div class="history-score"><span class="team ${aWon?'':'loser'}">${escapeHtml(teamName(m,'a'))}</span><span class="numbers">${m.score_a} × ${m.score_b}${isBest3?`<small class="series-sets">${escapeHtml(setSummary)}</small>`:''}</span><span class="team right ${aWon?'loser':''}">${escapeHtml(teamName(m,'b'))}</span></div>
       <div class="history-meta"><span>${m.recorded_by ? 'Por '+escapeHtml(m.recorded_by) : (m.first_server ? '1º saque: '+escapeHtml(nameFor(m.first_server)) : '')}</span><span class="edit-actions"><button type="button" data-edit="${escapeHtml(m.id)}">Editar</button><button type="button" data-delete="${escapeHtml(m.id)}">Excluir</button></span></div>
     </article>`;
   }).join('') : '<p class="empty">Nenhuma partida nessa modalidade.</p>';
@@ -215,14 +241,28 @@ function setFormMode(mode) {
   updateServerOptions();
 }
 function setScoreOptions(format, preserve=false) {
+  const best3=format==='best3';
+  $('best3-scores').hidden=!best3;
+  const normal=$('score_a').closest('.score-fields');
+  normal.hidden=best3;
+  $('score_a').required=!best3; $('score_b').required=!best3;
   const options=['<option value="">–</option>'];
   for(let i=0;i<=(format==='standard'?7:3);i++) options.push(`<option value="${i}">${i}</option>`);
   for(const id of ['score_a','score_b']) {
     const el=$(id), previous=el.value;
     el.innerHTML=options.join('');
-    if(preserve && previous!=='' && Number(previous)<=(format==='standard'?7:3)) el.value=previous;
+    if(preserve&&previous!==''&&Number(previous)<=(format==='standard'?7:3)) el.value=previous;
   }
-  $('score-format-hint').textContent=format==='standard'?'6 games, ou 7–5 / 7–6':'Primeiro a 3 games';
+  const fullSets=['<option value="">–</option>'];
+  for(let i=0;i<=7;i++)fullSets.push(`<option value="${i}">${i}</option>`);
+  for(const set of [1,2,3])for(const side of ['a','b']) {
+    const el=$(`set${set}_${side}`), previous=el.value;
+    if(!el.options.length)el.innerHTML=fullSets.join('');
+    if(!preserve)el.value='';
+    else if(previous)el.value=previous;
+    el.required=best3 && set<3;
+  }
+  $('score-format-hint').textContent=best3?'Primeiro a vencer 2 sets':format==='standard'?'6 games, ou 7–5 / 7–6':'Primeiro a 3 games';
 }
 function clearForm() {
   editId = null; $('match-form').reset(); $('played_on').value=localToday();
@@ -240,13 +280,28 @@ function getFormData() {
   };
   const ids=[d.a1,d.b1,...(d.mode==='doubles'?[d.a2,d.b2]:[])];
   if (ids.some(x=>!x)||new Set(ids).size!==ids.length) throw new Error('Selecione jogadores diferentes para cada posição.');
-  if (!validScore(d.set_format,d.score_a,d.score_b)) throw new Error(d.set_format==='standard'?'Placar inválido: use 6–0 a 6–4, 7–5 ou 7–6.':'Placar inválido: use 3–0, 3–1 ou 3–2.');
+  if(d.set_format==='best3') {
+    const sets=[];
+    for(const i of [1,2,3]) {
+      const a=$(`set${i}_a`).value, b=$(`set${i}_b`).value;
+      if((a==='') !== (b==='')) throw new Error(`Preencha os dois lados do ${i}º set.`);
+      if(a!=='' && b!=='') sets.push({a:Number(a),b:Number(b)});
+    }
+    if(!validBest3(sets)) throw new Error('Informe dois sets válidos (ou três, se houver empate em 1–1).');
+    d.set_scores=sets;
+    d.score_a=sets.filter(s=>s.a>s.b).length;
+    d.score_b=sets.length-d.score_a;
+  } else if (!validScore(d.set_format,d.score_a,d.score_b)) {
+    throw new Error(d.set_format==='standard'?'Placar inválido: use 6–0 a 6–4, 7–5 ou 7–6.':'Placar inválido: use 3–0, 3–1 ou 3–2.');
+  }
   if (!d.played_on) throw new Error('Informe a data da partida.');
   return d;
 }
 function verifyDemo(body) {
   if (body.mode !== 'singles' && body.mode !== 'doubles') throw new Error('Modalidade inválida.');
-  if (!validScore(body.set_format,body.score_a,body.score_b)) throw new Error('Placar inválido para o formato escolhido.');
+  if(body.set_format==='best3') {
+    if(!validBest3(body.set_scores) || body.score_a!==body.set_scores.filter(s=>s.a>s.b).length || body.score_b!==body.set_scores.filter(s=>s.b>s.a).length) throw new Error('Série de sets inválida.');
+  } else if (!validScore(body.set_format,body.score_a,body.score_b)) throw new Error('Placar inválido para o formato escolhido.');
   const ids=[body.a1,body.b1,...(body.mode==='doubles'?[body.a2,body.b2]:[])];
   if (ids.some(x=>!state.players.find(p=>p.id===x))||new Set(ids).size!==ids.length) throw new Error('Jogadores inválidos.');
 }
@@ -266,7 +321,14 @@ function selectMatch(id) {
   const m=state.matches.find(x=>x.id===id);if(!m)return;
   clearForm();setFormMode(m.mode);$('set_format').value=matchFormat(m);setScoreOptions(matchFormat(m));
   for(const key of ['a1','a2','b1','b2']) if(m[key]) $(key).value=m[key];
-  $('score_a').value=m.score_a; $('score_b').value=m.score_b;
+  if(matchFormat(m)==='best3') {
+    readSets(m).forEach((s,i)=>{
+      $(`set${i+1}_a`).value=String(s.a);
+      $(`set${i+1}_b`).value=String(s.b);
+    });
+  } else {
+    $('score_a').value=m.score_a; $('score_b').value=m.score_b;
+  }
   $('played_on').value=m.played_on; $('recorded_by').value=m.recorded_by || '';
   updateServerOptions(); $('first_server').value=m.first_server || '';
   editId=id; $('save-match').textContent='Salvar correção'; $('cancel-edit').hidden=false;
@@ -324,7 +386,7 @@ for(const button of document.querySelectorAll('[data-rank-mode]')) button.addEve
 for(const button of document.querySelectorAll('[data-history-mode]')) button.addEventListener('click',()=>{historyMode=button.dataset.historyMode;historyLimit=12;renderHistory();});
 for(const button of document.querySelectorAll('[data-form-mode]')) button.addEventListener('click',()=>{setFormMode(button.dataset.formMode);$('a2').value='';$('b2').value='';updateServerOptions();});
 for(const id of ['a1','a2','b1','b2']) $(id).addEventListener('change',updateServerOptions);
-$('set_format').addEventListener('change',()=>setScoreOptions($('set_format').value,true));
+$('set_format').addEventListener('change',()=>setScoreOptions($('set_format').value,false));
 $('match-form').addEventListener('submit',async(e)=>{
   e.preventDefault();const btn=$('save-match');btn.disabled=true;
   try {await storeMatch(getFormData());} catch(err){showToast(err.message||'Erro ao salvar.',true);}finally{btn.disabled=false;}

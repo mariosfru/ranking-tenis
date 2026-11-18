@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111b16">
   <meta name="description" content="Ranking individual de tênis entre amigos: simples, duplas e histórico de jogos.">
   <title>Ranking do Tênis</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=6-bo3">
 </head>
 <body>
   <div class="page-shell">
@@ -47,7 +47,7 @@
           <button class="segment" data-rank-mode="performance" type="button">Performance</button>
         </div>
         <div class="table-scroll"><table class="ranking-table"><thead><tr><th>POS.</th><th>JOGADOR</th><th>V–D</th><th>APROV.</th><th id="ranking-final-header">SALDO %</th></tr></thead><tbody id="ranking-body"></tbody></table></div>
-        <p id="ranking-explanation" class="footnote">Ordem: mais vitórias, maior aproveitamento, saldo proporcional médio e, em empate exato entre dois jogadores, confronto direto. Minisset e set convencional valem igualmente.</p>
+        <p id="ranking-explanation" class="footnote">Ordem: mais vitórias, maior aproveitamento e saldo proporcional médio. Minisset, set e melhor de três sets valem uma vitória por partida.</p>
       </section>
 
       <div class="lower-grid">
@@ -74,6 +74,7 @@
               <select id="set_format" required>
                 <option value="mini">Minisset · primeiro a 3 games</option>
                 <option value="standard">Set convencional · 6 games (tie-break em 6–6)</option>
+                <option value="best3">Melhor de 3 sets · dois sets para vencer</option>
               </select>
             </label>
             <div class="score-head">PLACAR FINAL <small id="score-format-hint">Primeiro a 3 games</small></div>
@@ -81,6 +82,12 @@
               <label><span>Equipe A</span><select id="score_a" required></select></label>
               <strong>×</strong>
               <label><span>Equipe B</span><select id="score_b" required></select></label>
+            </div>
+            <div id="best3-scores" class="best3-scores" hidden>
+              <p class="best3-note">Anote os games de cada set. O terceiro só é necessário se as equipes dividirem os dois primeiros.</p>
+              <div class="set-score-row"><strong>1º set</strong><label><span>Equipe A</span><select id="set1_a"></select></label><strong>×</strong><label><span>Equipe B</span><select id="set1_b"></select></label></div>
+              <div class="set-score-row"><strong>2º set</strong><label><span>Equipe A</span><select id="set2_a"></select></label><strong>×</strong><label><span>Equipe B</span><select id="set2_b"></select></label></div>
+              <div class="set-score-row"><strong>3º set</strong><label><span>Equipe A</span><select id="set3_a"></select></label><strong>×</strong><label><span>Equipe B</span><select id="set3_b"></select></label></div>
             </div>
             <div class="two-fields">
               <label><span>Data do jogo</span><input id="played_on" type="date" required></label>
@@ -121,6 +128,6 @@
     <footer>RANKING DO TÊNIS <span>Feito para jogar mais, contar melhor.</span></footer>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="config.js"></script><script type="module" src="app.js?v=5"></script>
+  <script src="config.js"></script><script type="module" src="app.js?v=6-bo3"></script>
 </body>
 </html>
